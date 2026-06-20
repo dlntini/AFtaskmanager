@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard - AF-Task Manager</title>
+<link rel="icon" type="image/png" href="image/logo.png">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dashboard-page">
+
+<!-- header -->> 
+<header class="main-header">
+<div class="header-left d-flex align-items-center gap-2">
+    <button id="sidebarToggle" class="btn text-white p-0 border-0 fs-4 me-2 d-md-none" onclick="toggleMobileSidebar()"><i class="fa-solid fa-bars"></i></button>
+    <h2>AF-TASK MANAGER</h2>
+</div>
+
+<div class="header-right">
+    Welcome Back, <span id="userName"></span>
+</div>
+</header>
+
+<!-- footer -->
+<footer class="main-footer">&copy; 2026 AF-Task Manager</footer>
+
+<!-- sidebar -->
+<div class="sidebar">
+    <a href="dashboard.html" class="active"><i class="fa-solid fa-chart-line"></i> Dashboard </a>
+    <a href="tasks.html" class="dropdown-toggle"><i class="fa-solid fa-list-check"></i> Tasks</a>
+    <a href="users.html"><i class="fa-regular fa-user"></i> Users</a>
+    <a href="settings.html"><i class="fa-solid fa-gear"></i> Settings</a>
+    <a href="#" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+</div>
+
+<!-- main content area -->
+<div class="content">
+
+<!-- summary cards that shows total tasks, due today, completed, incomplete -->
+<div class="row mt-4">
+<div class="col-6 col-md-3">
+<div class="card summary-card p-3 text-center">
+    <h4 id="totalTasks">0</h4><small>All Tasks</small>
+</div>
+</div>
+
+<div class="col-6 col-md-3">
+<div class="card summary-card p-3 text-center">
+    <h4 id="dueToday">0</h4><small>Due Today</small>
+</div>
+</div>
+
+<div class="col-6 col-md-3">
+<div class="card summary-card p-3 text-center">
+    <h4 id="completedTasks">0</h4><small>Completed</small>
+</div>
+</div>
+
+<div class="col-6 col-md-3">
+<div class="card summary-card p-3 text-center">
+    <h4 id="incompleteTasks">0</h4><small>Incomplete</small>
+</div>
+</div>
+</div>
+
+<!-- task progress bars that show statistics -->
+<div class="row mt-4">
+<div class="col-md-8">
+<div class="card p-4">
+    <h5 class="mb-5" style="font-weight:600;">Task Progress </h5>
+    <label>Not Started (<span id="notStartedCount">0</span>)</label>
+
+<div class="progress mb-4">
+    <div id="notStartedBar" class="progress-bar bg-danger" style="width:0%">0%</div>
+</div>
+
+<label>In Progress (<span id="inProgressCount">0</span>)</label>
+    <div class="progress mb-4">
+    <div id="inProgressBar" class="progress-bar bg-info" style="width:0%">0%</div>
+</div>
+
+<label>Completed (<span id="completedCount">0</span>)</label>
+    <div class="progress mb-5">
+    <div id="completedBar" class="progress-bar bg-success" style="width:0%">0%</div>
+</div>
+</div>
+</div>
+
+  <!-- donut chart -->
+<div class="col-md-4">
+<div class="card p-3">
+    <h5 class="text-center mb-3" style="font-weight:600;">Task Statistics</h5>
+
+<div class="d-flex justify-content-center">
+    <canvas id="donutChart" style="max-width:230px; max-height:230px;"></canvas>
+</div>
+
+<div class="mt-3 d-flex justify-content-center gap-3" style="font-size:14px;">
+    <span class="d-flex align-items-center">
+    <span style="width:12px;height:12px;background:#dc3545;border-radius:3px;margin-right:5px;"></span>
+    Not Started
+</span>
+    <span class="d-flex align-items-center">
+    <span style="width:12px;height:12px;background:#0dcaf0;border-radius:3px;margin-right:5px;"></span>
+    In Progress
+</span>
+    <span class="d-flex align-items-center">
+    <span style="width:12px;height:12px;background:#198754;border-radius:3px;margin-right:5px;"></span>
+    Completed
+</span>
+</div>
+</div>
+</div>
+</div>
+
+ <!-- latest task table -->
+<div class="row mt-4">
+<div class="col-md-12">
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+    <span>Latest Tasks</span>
+    <a href="tasks.html" class="btn btn-sm btn-primary">Manage Tasks</a>
+ </div>
+                
+ <div class="card-body">
+    <div class="table-responsive">
+        <table class="table table-sm">
+        <thead>
+        <tr><th>No</th><th>Title</th><th>Priority</th><th>Status</th><th>Due</th></tr>
+    </thead>
+        <tbody id="latestTasksBody"> 
+    </tbody>
+    </table>
+    </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script src="script.js"></script>
+<script>
+// calculate stats like total tasks, completed, incomplete.
+function calculateStats() 
+{
+    const tasks = getUserTasks();
+    const today = new Date().toISOString().split('T')[0]; 
+    let total = tasks.length, dueToday=0, incomplete=0, completed=0, notStarted=0, inProgress=0;
+
+    tasks.forEach(t=>
+    {
+        if(t.status!=='Completed') incomplete++;  // count incomplete tasks
+        if(t.status==='Completed') completed++;  // count completed tasks
+        if(t.status==='Not Started') notStarted++;
+        if(t.status==='In Progress') inProgress++;
+        if(t.due_date===today) dueToday++; // count tasks due today
+    });
+
+    return {total,dueToday,incomplete,completed,notStarted,inProgress};
+}
+
+function renderLatestTasks()
+{
+    const tasks = getUserTasks();
+    const tbody = document.getElementById('latestTasksBody');
+    tbody.innerHTML = ''; 
+
+    // loop through tasks in reverse which is latest first
+    tasks.slice().reverse().forEach((t, index)=>
+    {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${(index + 1).toString().padStart(2, '0')}</td>
+            <td>${t.title}</td>
+            <td>${t.priority}</td>
+            <td>${t.status}</td>
+            <td>${t.due_date || '-'}</td>
+        `;
+        tbody.appendChild(tr); // add row to table
+    });
+}
+
+// render the donut chart showing task status
+function renderDonutChart(notStarted,inProgress,completed)
+{
+    const ctx = document.getElementById('donutChart');
+    if(!ctx) return;
+    new Chart(ctx,
+    {
+        type:'doughnut',
+        data:
+        {
+            labels:['Not Started','In Progress','Completed'],
+            datasets:[{
+                data:[notStarted,inProgress,completed],
+                backgroundColor:['#dc3545','#0dcaf0','#198754'],
+                borderWidth:2
+            }]
+        },
+        options:{cutout:'65%',plugins:{legend:{display:false}}} 
+    });
+}
+
+// run when page is fully loaded
+document.addEventListener('DOMContentLoaded', ()=>{
+    if (typeof applyUserStyles === 'function') applyUserStyles();
+    const username = getCurrentUser();  // get current username
+    const userObj = users.find(u => u.username === username); // find user object
+    document.getElementById('userName').textContent = userObj ? userObj.name : username; // show user name
+
+    const stats = calculateStats(); // calculate stats
+
+     // update summary cards
+    document.getElementById('totalTasks').textContent = stats.total;
+    document.getElementById('dueToday').textContent = stats.dueToday;
+    document.getElementById('completedTasks').textContent = stats.completed;
+    document.getElementById('incompleteTasks').textContent = stats.incomplete;
+
+    document.getElementById('notStartedCount').textContent = stats.notStarted;
+    document.getElementById('inProgressCount').textContent = stats.inProgress;
+    document.getElementById('completedCount').textContent = stats.completed;
+
+    const total = stats.total || 1; // avoid divide by zero
+
+    // update progress bars
+    document.getElementById('notStartedBar').style.width = ((stats.notStarted/total)*100)+'%';
+    document.getElementById('notStartedBar').textContent = Math.round((stats.notStarted/total)*100)+'%';
+
+    document.getElementById('inProgressBar').style.width = ((stats.inProgress/total)*100)+'%';
+    document.getElementById('inProgressBar').textContent = Math.round((stats.inProgress/total)*100)+'%';
+
+    document.getElementById('completedBar').style.width = ((stats.completed/total)*100)+'%';
+    document.getElementById('completedBar').textContent = Math.round((stats.completed/total)*100)+'%';
+
+    // render chart and table
+    renderDonutChart(stats.notStarted, stats.inProgress, stats.completed);
+    renderLatestTasks();
+});
+
+</script>
+</body>
+</html>
